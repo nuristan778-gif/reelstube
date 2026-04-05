@@ -3,129 +3,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ReelsTube Ultra v37.0</title>
+    <title>ReelsTube Global v40.0</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
         :root { --neon: #00f2ea; --pink: #ff007f; --bg: #060212; }
-        body { margin:0; background: var(--bg); color:#fff; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
+        body { margin:0; background: var(--bg); color:#fff; font-family: sans-serif; overflow: hidden; }
         
-        /* Защита от ботов */
-        #bot-protection { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; text-align: center; }
-        .shield-btn { padding: 15px 30px; border: 2px solid var(--neon); color: var(--neon); background: none; border-radius: 50px; font-weight: bold; cursor: pointer; box-shadow: 0 0 20px var(--neon); }
+        /* Экраны и Защита */
+        #bot-shield, #welcome-screen, #app-interface { position: fixed; inset: 0; background: var(--bg); display: none; flex-direction: column; z-index: 100; }
+        
+        /* Лента видео */
+        .video-feed { height: 100vh; overflow-y: scroll; scroll-snap-type: y mandatory; }
+        .video-card { height: 100vh; width: 100vw; scroll-snap-align: start; position: relative; background: #000; border-bottom: 1px solid #222; }
+        .video-overlay { position: absolute; bottom: 100px; left: 20px; text-shadow: 2px 2px 5px #000; }
 
-        /* Вход и Приветствие */
-        .auth-screen { padding: 50px 20px; text-align: center; display: none; }
-        .welcome-title { font-size: 28px; color: var(--neon); text-shadow: 0 0 15px var(--neon); margin-bottom: 30px; }
-        .auth-btn { width: 80%; padding: 15px; margin: 10px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; }
-        .reg-btn { background: var(--pink); color: #fff; }
-        .guest-btn { background: #333; color: #fff; }
+        /* Студия Записи */
+        .record-panel { padding: 20px; background: #111; border-radius: 20px; margin: 20px; border: 1px solid var(--neon); }
+        .music-input { width: 90%; padding: 12px; margin: 10px 0; border-radius: 10px; border: 1px solid var(--pink); background: #000; color: #fff; }
 
-        /* Счетчик онлайна */
-        .online-box { position: fixed; top: 15px; right: 15px; background: rgba(0,255,0,0.1); padding: 5px 12px; border-radius: 20px; border: 1px solid #0f0; font-size: 12px; z-index: 100; }
+        /* Кнопки */
+        .btn { padding: 15px 30px; border-radius: 25px; border: none; font-weight: bold; cursor: pointer; margin: 10px; }
+        .btn-neon { background: var(--neon); color: #000; }
+        .btn-pink { background: var(--pink); color: #fff; }
 
-        /* Раздел ЗАПИСЬ */
-        #recording-studio { display: none; padding: 20px; text-align: center; }
-        .music-list { background: #111; border-radius: 15px; padding: 10px; margin-top: 20px; text-align: left; }
-        .music-item { padding: 10px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; color: var(--neon); }
-
-        /* Лента рекомендаций */
-        .feed { padding: 10px; display: none; }
-        .video-card { width: 100%; height: 400px; background: #000; border-radius: 20px; margin-bottom: 20px; position: relative; border: 1px solid #222; }
-        .video-card video { width: 100%; height: 100%; object-fit: cover; border-radius: 20px; }
-
-        .nav-bar { position: fixed; bottom: 0; width: 100%; height: 75px; background: rgba(0,0,0,0.9); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #333; padding-bottom: env(safe-area-inset-bottom); display: none; }
+        /* Навигация */
+        .nav-bar { position: fixed; bottom: 0; width: 100%; height: 75px; background: rgba(0,0,0,0.9); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #333; z-index: 200; }
         .btn-plus { width: 55px; height: 38px; background: var(--neon); border-radius: 12px; color: #000; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 26px; }
     </style>
 </head>
-<body>
+<body onload="initApp()">
 
-    <div id="bot-protection" style="position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; text-align: center;">
-    <div style="border: 2px solid #ff007f; padding: 30px; border-radius: 20px; background: #0a0a0a; box-shadow: 0 0 30px rgba(255, 0, 127, 0.2);">
-        <h2 style="color: #fff; margin-bottom: 30px;">СИСТЕМА ПРОВЕРКИ</h2>
+    <div id="bot-shield" style="display: flex; align-items: center; justify-content: center;">
+        <h2 style="color:var(--pink)">ПРОВЕРКА</h2>
+        <button class="btn" style="background:#222; color:#fff" onclick="location.reload()">Я ВСЁ ПОНЯЛ</button>
+        <button class="btn btn-neon" onclick="showWelcome()">Я НИЧЕГО НЕ ПОНЯЛ</button>
+    </div>
+
+    <div id="welcome-screen" style="align-items: center; justify-content: center;">
+        <h1 style="color:var(--neon)">Добро пожаловать на ReelsTube</h1>
+        <button class="btn btn-neon" onclick="enterApp('Guest')">ВОЙТИ КАК ГОСТЬ</button>
+        <button class="btn btn-pink" onclick="enterApp('User')">ВОЙТИ ЧЕРЕЗ GOOGLE</button>
+    </div>
+
+    <div id="app-interface">
         
-        <button onclick="alert('БОТ ОБНАРУЖЕН! Доступ запрещен.'); location.reload();" 
-            style="width: 250px; padding: 15px; margin: 10px; background: #222; color: #fff; border: 1px solid #444; border-radius: 10px; font-weight: bold; cursor: pointer;">
-            Я ВСЁ ПОНЯЛ
-        </button>
-
-        <br>
-
-        <button onclick="passBot()" 
-            style="width: 250px; padding: 15px; margin: 10px; background: #00f2ea; color: #000; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; box-shadow: 0 0 15px #00f2ea;">
-            Я НИЧЕГО НЕ ПОНЯЛ
-        </button>
-    </div>
-    </div>
-
-    <div class="online-box">🟢 В СЕТИ: <span id="online-val">1</span></div>
-
-    <div id="main-app" class="feed">
-        <h2 style="color: var(--neon);">Рекомендации</h2>
-        <div id="video-feed">
+        <div id="feed-section" class="video-feed">
             <div class="video-card">
-                <div style="padding: 150px 20px; text-align: center; color: #444;">Глобальное видео #1</div>
+                <div style="padding-top:45vh; text-align:center; color:#555;">🎥 Глобальное видео #1</div>
+                <div class="video-overlay">
+                    <b id="user-display">@User_0000</b>
+                    <p>Трек: <span id="current-music">Оригинальный звук</span></p>
+                    <button class="btn-neon" style="padding:5px 15px;" onclick="this.innerText='Вы подписаны'">Подписаться</button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div id="recording-studio">
-        <h2 style="color: var(--pink);">Студия ЗАПИСЬ</h2>
-        <p>Выберите музыку для Reels:</p>
-        <div class="music-list">
-            <div class="music-item"><span>🎵 Phonk Remix 2026</span> <button onclick="selectMusic('Phonk')">Выбрать</button></div>
-            <div class="music-item"><span>🎵 Deep House Vibes</span> <button onclick="selectMusic('House')">Выбрать</button></div>
-            <div class="music-item"><span>🎵 Cyberpunk Synth</span> <button onclick="selectMusic('Synth')">Выбрать</button></div>
+        <div id="record-section" style="display:none; padding-top:50px; text-align:center;">
+            <div class="record-panel">
+                <h2 style="color:var(--neon)">ЗАПИСЬ</h2>
+                <input type="text" id="music-search" class="music-input" placeholder="Поиск музыки или ссылка .mp3">
+                <button class="btn btn-neon" onclick="loadMusic()">ПРОВЕРИТЬ МУЗЫКУ</button>
+                <audio id="audio-preview" controls style="display:none; width:100%; margin:10px 0;"></audio>
+                <br>
+                <input type="file" id="camera" accept="video/*" capture="user" style="display:none;">
+                <button class="btn btn-pink" onclick="document.getElementById('camera').click()">СНЯТЬ ВИДЕО</button>
+            </div>
         </div>
-        <br>
-        <input type="file" id="camera" accept="video/*" capture="user" style="display: none;">
-        <button class="auth-btn reg-btn" onclick="document.getElementById('camera').click()">НАЧАТЬ СЪЕМКУ</button>
-    </div>
 
-    <div id="nav" class="nav-bar">
-        <div onclick="showSection('main')">🏠</div>
-        <div class="btn-plus" onclick="showSection('rec')">+</div>
-        <div onclick="alert('Профиль Мастера')">👤</div>
+        <div id="profile-section" style="display:none; padding:50px; text-align:center;">
+            <div style="font-size:60px;">👤</div>
+            <h2 id="profile-name">User_0000</h2>
+            <button class="btn btn-neon" onclick="changeName()">ИЗМЕНИТЬ ИМЯ</button>
+        </div>
+
+        <div class="nav-bar">
+            <div onclick="showTab('feed')">🏠</div>
+            <div class="btn-plus" onclick="showTab('record')">+</div>
+            <div onclick="showTab('profile')">👤</div>
+        </div>
     </div>
 
     <script>
-        // Логика переключения экранов
-        function passBot() {
-            document.getElementById('bot-protection').style.display = 'none';
-            document.getElementById('auth-screen').style.display = 'block';
+        let userName = "";
+
+        function initApp() {
+            // Генерация имени
+            if(!localStorage.getItem('rt_user')) {
+                localStorage.setItem('rt_user', "User_" + Math.floor(Math.random()*899999 + 100000));
+            }
+            userName = localStorage.getItem('rt_user');
+            document.getElementById('user-display').innerText = "@" + userName;
+            document.getElementById('profile-name').innerText = userName;
         }
 
-        function showApp() {
-            document.getElementById('auth-screen').style.display = 'none';
-            document.getElementById('main-app').style.display = 'block';
-            document.getElementById('nav').style.display = 'flex';
+        function showWelcome() {
+            document.getElementById('bot-shield').style.display = 'none';
+            document.getElementById('welcome-screen').style.display = 'flex';
         }
 
-        function showSection(name) {
-            if(name === 'rec') {
-                document.getElementById('main-app').style.display = 'none';
-                document.getElementById('recording-studio').style.display = 'block';
+        function enterApp() {
+            document.getElementById('welcome-screen').style.display = 'none';
+            document.getElementById('app-interface').style.display = 'block';
+        }
+
+        function showTab(tab) {
+            document.getElementById('feed-section').style.display = tab === 'feed' ? 'block' : 'none';
+            document.getElementById('record-section').style.display = tab === 'record' ? 'block' : 'none';
+            document.getElementById('profile-section').style.display = tab === 'profile' ? 'block' : 'none';
+        }
+
+        function loadMusic() {
+            let url = document.getElementById('music-search').value;
+            if(url.startsWith('http')) {
+                let player = document.getElementById('audio-preview');
+                player.src = url;
+                player.style.display = 'block';
+                document.getElementById('current-music').innerText = "По ссылке";
+                alert("Музыка загружена!");
             } else {
-                document.getElementById('main-app').style.display = 'block';
-                document.getElementById('recording-studio').style.display = 'none';
+                alert("Введите прямую ссылку на музыку (.mp3)");
             }
         }
 
-        function selectMusic(name) {
-            alert("Музыка выбрана: " + name + ". Теперь нажимай СЪЕМКУ!");
+        function changeName() {
+            let newName = prompt("Новое имя:", userName);
+            if(newName) {
+                localStorage.setItem('rt_user', newName);
+                location.reload();
+            }
         }
-
-        // Firebase Реальный онлайн
-        const firebaseConfig = { databaseURL: "https://nuristan778-gif-default-rtdb.firebaseio.com" };
-        if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
-        const db = firebase.database();
-        const countRef = db.ref('online_users');
-        const userRef = countRef.push();
-        userRef.onDisconnect().remove();
-        userRef.set(true);
-        countRef.on('value', (snap) => {
-            document.getElementById('online-val').innerText = snap.numChildren().toLocaleString();
-        });
     </script>
 </body>
 </html>
