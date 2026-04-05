@@ -3,175 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>ReelsTube Neon</title>
-    
+    <title>ReelsTube: Real-Time Tracker</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
+    
     <style>
-        /* НАШИ УНИКАЛЬНЫЕ ЦВЕТА: ФИОЛЕТОВЫЙ И ГОЛУБОЙ */
-        :root { 
-            --purple: #6a11cb; 
-            --blue: #2575fc; 
-            --neon-blue: #00f2ea;
-            --deep-bg: #1a0b2e; 
-        }
+        :root { --neon: #00f2ea; --bg: #0b0518; }
+        body { margin:0; background: var(--bg); color:#fff; font-family: sans-serif; }
         
-        body { 
-            margin:0; 
-            background: var(--deep-bg); 
-            color:#fff; 
-            font-family: -apple-system, sans-serif; 
-            overflow:hidden; 
+        /* Реальный счетчик онлайна */
+        .online-panel {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.8); padding: 8px 20px; border-radius: 30px;
+            border: 2px solid var(--neon); box-shadow: 0 0 15px var(--neon);
+            z-index: 1000; display: flex; align-items: center; gap: 10px;
         }
+        .live-dot { width: 10px; height: 10px; background: #0f0; border-radius: 50%; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+        #online-val { font-weight: bold; font-size: 18px; color: var(--neon); }
 
-        /* --- ЭКРАНЫ --- */
-        .screen { display:none; height: 100vh; width: 100vw; position: absolute; flex-direction: column; }
-        .active-screen { display: flex; }
-
-        /* --- ЛЕНТА РЕКОМЕНДАЦИЙ --- */
-        .feed-scroll { flex: 1; overflow-y: scroll; scroll-snap-type: y mandatory; -webkit-overflow-scrolling: touch; }
-        .video-post { 
-            height: 100vh; width: 100vw; scroll-snap-align: start; 
-            position: relative; background: linear-gradient(45deg, var(--purple), var(--blue));
-            display: flex; align-items: center; justify-content: center;
-        }
-
-        /* --- ИНТЕРФЕЙС ПОВЕРХ ВИДЕО --- */
-        .side-actions { position: absolute; right: 15px; bottom: 120px; display: flex; flex-direction: column; gap: 20px; align-items: center; }
-        .action-circle { 
-            width: 55px; height: 55px; border-radius: 50%; 
-            background: rgba(255,255,255,0.15); backdrop-filter: blur(5px);
-            display: flex; align-items: center; justify-content: center; font-size: 24px;
-            border: 1px solid var(--neon-blue);
-        }
-        .liked { color: var(--neon-blue); filter: drop-shadow(0 0 8px var(--neon-blue)); }
-
-        /* --- НАВИГАЦИЯ (НИЖНЯЯ ПАНЕЛЬ) --- */
-        .nav-bar { 
-            height: 80px; background: rgba(26, 11, 46, 0.95); 
-            display: flex; border-top: 2px solid var(--purple); 
-            padding-bottom: env(safe-area-inset-bottom);
-        }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888; font-size: 10px; font-weight: bold; }
-        .nav-active { color: var(--neon-blue); }
-
-        /* --- КНОПКА ЗАПИСИ (+) --- */
-        .record-btn { 
-            width: 50px; height: 35px; background: linear-gradient(to right, var(--purple), var(--blue)); 
-            border-radius: 10px; display: flex; align-items: center; justify-content: center; 
-            font-size: 24px; color: white; border: none;
-        }
-
-        /* --- ПОИСК (ГЛОБАЛЬНЫЙ) --- */
-        .search-header { padding: 50px 20px 20px; }
-        .search-box { 
-            width: 100%; padding: 15px; border-radius: 15px; border: 2px solid var(--purple); 
-            background: rgba(255,255,255,0.05); color: white; outline: none;
-        }
+        .profile-header { padding: 80px 20px 20px; text-align: center; }
+        .avatar { width: 70px; height: 70px; border-radius: 50%; border: 2px solid var(--neon); margin: 0 auto; background: #222; display: flex; align-items: center; justify-content: center; font-size: 30px; }
+        
+        .video-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px; }
+        .video-item { background: #111; border-radius: 10px; height: 200px; border: 1px solid #333; position: relative; }
+        
+        .nav-bar { position: fixed; bottom: 0; width: 100%; height: 70px; background: #000; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #333; padding-bottom: env(safe-area-inset-bottom); }
+        .btn-plus { width: 50px; height: 35px; background: var(--neon); border-radius: 10px; color: #000; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 28px; }
     </style>
 </head>
 <body>
 
-    <div id="recs" class="screen active-screen">
-        <div id="video-feed" class="feed-scroll">
-            </div>
+    <div class="online-panel">
+        <div class="live-dot"></div>
+        <span>В СЕТИ: <span id="online-val">Загрузка...</span></span>
     </div>
 
-    <div id="search" class="screen">
-        <div class="search-header">
-            <input type="text" class="search-box" placeholder="Глобальный поиск Neon...">
-        </div>
-        <div style="padding: 20px; color: var(--neon-blue);">Популярное сегодня: #S24Ultra #NeonTube</div>
+    <div class="profile-header">
+        <div class="avatar">👤</div>
+        <h2>Мастер</h2>
+        <p style="opacity:0.6;">Личный профиль v36.0</p>
     </div>
 
-    <div id="inbox" class="screen">
-        <div style="margin: auto; text-align: center;">💬 У вас 0 новых уведомлений</div>
-    </div>
-
-    <div id="profile" class="screen">
-        <div style="padding: 60px 20px; text-align: center;">
-            <div style="width:100px; height:100px; border: 3px solid var(--neon-blue); border-radius: 50%; margin: 0 auto 15px;"></div>
-            <h2 id="my-name">@User_Neon</h2>
-            <p style="opacity: 0.6;">0 подписчиков • 0 лайков</p>
-        </div>
+    <div class="video-grid" id="feed">
+        <div class="video-item"></div>
+        <div class="video-item"></div>
     </div>
 
     <div class="nav-bar">
-        <div class="nav-item nav-active" onclick="tab('recs', this)">🏠<span>Главная</span></div>
-        <div class="nav-item" onclick="tab('search', this)">🔍<span>Поиск</span></div>
-        <div class="nav-item" onclick="addNewVideo()"><div class="record-btn">+</div></div>
-        <div class="nav-item" onclick="tab('inbox', this)">📥<span>Входящие</span></div>
-        <div class="nav-item" onclick="tab('profile', this)">👤<span>Профиль</span></div>
+        <div>🏠</div>
+        <div class="btn-plus">+</div>
+        <div style="color:var(--neon)">👤</div>
     </div>
 
-<script>
-    // FIREBASE - Глобальное Облако (Мост между устройствами)
-    const fb = { databaseURL: "https://reelstube-33c69-default-rtdb.firebaseio.com" };
-    firebase.initializeApp(fb);
-    const db = firebase.database();
-    const myID = "User_" + Math.floor(Math.random()*999);
-    document.getElementById('my-name').innerText = "@" + myID;
+    <script>
+        // ТВОИ НАСТРОЙКИ FIREBASE (Вставь свои данные здесь)
+        const firebaseConfig = {
+            databaseURL: "https://nuristan778-gif-default-rtdb.firebaseio.com" // Укажи свой URL базы
+        };
+        
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        
+        const db = firebase.database();
+        const onlineRef = db.ref('.info/connected');
+        const countRef = db.ref('online_users');
 
-    // ПЕРЕКЛЮЧЕНИЕ РАЗДЕЛОВ
-    function tab(id, el) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
-        document.getElementById(id).classList.add('active-screen');
-        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('nav-active'));
-        el.classList.add('nav-active');
-    }
-
-    // ГЛОБАЛЬНЫЕ РЕКОМЕНДАЦИИ (ОБНОВЛЕНИЕ ЗА 1 СЕКУНДУ)
-    function startGlobalSync() {
-        db.ref('global_posts').on('value', (snap) => {
-            const feed = document.getElementById('video-feed');
-            feed.innerHTML = '';
-            const data = snap.val();
-            if (data) {
-                Object.keys(data).reverse().forEach(key => {
-                    const post = data[key];
-                    const likes = post.likes ? Object.keys(post.likes).length : 0;
-                    const likedClass = post.likes && post.likes[myID] ? 'liked' : '';
-                    
-                    feed.insertAdjacentHTML('beforeend', `
-                        <div class="video-post">
-                            <div style="font-size:60px;">🎥</div>
-                            <div style="position:absolute; left:20px; bottom:100px;">
-                                <div style="font-weight:bold; color:var(--neon-blue);">@${post.author}</div>
-                                <div style="font-size:14px;">${post.desc}</div>
-                            </div>
-                            <div class="side-actions">
-                                <div onclick="like('${key}')">
-                                    <div class="action-circle ${likedClass}">❤️</div>
-                                    <small>${likes}</small>
-                                </div>
-                                <div class="action-circle">💬</div>
-                            </div>
-                        </div>
-                    `);
-                });
+        // Логика реального счетчика
+        onlineRef.on('value', (snapshot) => {
+            if (snapshot.val() === true) {
+                const userRef = countRef.push();
+                // Когда пользователь уходит - удаляем его из базы
+                userRef.onDisconnect().remove();
+                userRef.set(true);
             }
         });
-    }
 
-    // ЛАЙКИ (1 ЧЕЛОВЕК = 1 ЛАЙК)
-    function like(id) {
-        const ref = db.ref(`global_posts/${id}/likes/${myID}`);
-        ref.once('value', s => { if(s.exists()) ref.remove(); else ref.set(true); });
-    }
-
-    // ЗАПИСЬ (ГЛОБАЛЬНОЕ ВИДЕО)
-    function addNewVideo() {
-        db.ref('global_posts').push({
-            author: myID,
-            desc: "Эксклюзивный фиолетовый стиль! 🚀",
-            time: Date.now()
+        // Слушаем изменения количества людей
+        countRef.on('value', (snapshot) => {
+            const count = snapshot.numChildren();
+            document.getElementById('online-val').innerText = count.toLocaleString();
         });
-        alert("Видео выложено в глобальную сеть! Обновление через 1 сек. ✅");
-    }
-
-    startGlobalSync();
-</script>
+    </script>
 </body>
 </html>
